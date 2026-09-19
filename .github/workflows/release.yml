@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test
+        run: dotnet run --project .\tests\PluginManager.Tests.csproj
+
+      - name: Publish
+        run: dotnet publish .\PluginManager.csproj -c Release --nologo
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $zip = "ZCodePluginManager.zip"
+          Remove-Item $zip -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path "publish\*" -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path "SHA256SUMS" -Value "$hash  $zip"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $title = "ZCode Plugin Manager $env:GITHUB_REF_NAME"
+          gh release create "$env:GITHUB_REF_NAME" "ZCodePluginManager.zip" "SHA256SUMS" --title $title --generate-notes

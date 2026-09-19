@@ -32,3 +32,5 @@ dotnet run --project .\tests\PluginManager.Tests.csproj
 - 主页面可以直接粘贴 GitHub 链接添加插件；卡片或详情页可移除本地插件目录。
 - 支持通用 `install.py` 和 `install.ps1` 插件；没有通用安装器的仓库仍会添加页面，但安装按钮会禁用。
 - 设置保存在 `%APPDATA%\ZCodePluginManager\settings.json`。
+- 主页面“检查更新”支持热更新：应用从 GitHub Release 下载 `ZCodePluginManager.zip`，校验 SHA-256 后由外部 updater 等待当前进程退出、替换文件并自动重启。
+- 推送 `v*` 标签时，GitHub Actions 会自动构建、测试、打包并创建 Release。

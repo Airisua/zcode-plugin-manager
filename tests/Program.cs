@@ -12,7 +12,9 @@ internal class Program
             () => GitServiceTests.RejectsInvalidRepositoryInputs("not-a-url"),
             () => GitServiceTests.RejectsInvalidRepositoryInputs("https://github.com/owner"),
             MarkdownDigestTests.ExtractsTitleSummaryAndFeatures,
-            PluginCatalogTests.DiscoversGenericPythonPlugin
+            PluginCatalogTests.DiscoversGenericPythonPlugin,
+            UpdateServiceTests.ParsesVersionTags,
+            UpdateServiceTests.ReadsChecksumManifest
         ]);
     }
 }

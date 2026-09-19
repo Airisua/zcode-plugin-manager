@@ -29,6 +29,10 @@ public static class SettingsService
             {
                 settings.PluginsRoot = PluginCatalog.ResolveDefaultRoot();
             }
+            if (string.IsNullOrWhiteSpace(settings.UpdateRepository))
+            {
+                settings.UpdateRepository = UpdateService.DefaultRepository;
+            }
 
             return settings;
         }
@@ -36,7 +40,8 @@ public static class SettingsService
         {
             return new AppSettings
             {
-                PluginsRoot = PluginCatalog.ResolveDefaultRoot()
+                PluginsRoot = PluginCatalog.ResolveDefaultRoot(),
+                UpdateRepository = UpdateService.DefaultRepository
             };
         }
     }

@@ -59,6 +59,53 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ReloadPlugins();
     }
 
+    private async void OnCheckForUpdate(object sender, RoutedEventArgs e)
+    {
+        CheckUpdateButton.IsEnabled = false;
+        UpdateStatusText.Text = "正在检查热更新...";
+        try
+        {
+            var currentVersion = typeof(MainWindow).Assembly.GetName().Version
+                ?? new Version(0, 0, 0);
+            var update = await UpdateService.CheckAsync(_settings.UpdateRepository, currentVersion);
+            if (update is null)
+            {
+                UpdateStatusText.Text = "已是最新版本。";
+                MessageBox.Show("当前已是最新版本。", "热更新", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var answer = MessageBox.Show(
+                $"发现新版本 {update.Version}。\n\n是否下载并热更新？更新完成后会自动重启。",
+                "发现热更新",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (answer != MessageBoxResult.Yes)
+            {
+                UpdateStatusText.Text = $"已发现 {update.Version}，等待手动更新。";
+                return;
+            }
+
+            UpdateStatusText.Text = "正在下载并准备热更新...";
+            var stagedExecutable = await UpdateService.PrepareAsync(
+                update,
+                AppContext.BaseDirectory,
+                progress => Dispatcher.Invoke(() => UpdateStatusText.Text = progress));
+            UpdateService.ApplyUpdate(stagedExecutable, Environment.ProcessPath!, Environment.ProcessId);
+            UpdateStatusText.Text = $"已更新到 {update.Version}，正在重启...";
+            Application.Current.Shutdown();
+        }
+        catch (Exception exception)
+        {
+            UpdateStatusText.Text = "热更新失败。";
+            MessageBox.Show(exception.Message, "热更新失败", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            CheckUpdateButton.IsEnabled = true;
+        }
+    }
+
     private void OnOpenAddPlugin(object sender, RoutedEventArgs e)
     {
         SettingsPanel.Visibility = Visibility.Collapsed;

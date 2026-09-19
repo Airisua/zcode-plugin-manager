@@ -1,0 +1,331 @@
+<Window x:Class="ZCodePluginManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ZCode 插件管理器"
+        Width="1080"
+        Height="760"
+        MinWidth="880"
+        MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F7FA">
+    <Grid>
+        <Grid x:Name="MainPage">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Padding="34,26,34,16">
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PageTitle}" Text="插件" />
+                        <TextBlock Style="{StaticResource MutedText}"
+                                   Margin="0,8,0,0"
+                                   Text="{Binding PluginsRootSummary, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Orientation="Horizontal">
+                        <Button x:Name="RefreshButton"
+                                Style="{StaticResource SecondaryButton}"
+                                Content="刷新"
+                                Click="OnRefreshPlugins" />
+                        <Button x:Name="AddPluginButton"
+                                Style="{StaticResource PrimaryButton}"
+                                Margin="10,0,0,0"
+                                Content="添加插件"
+                                Click="OnOpenAddPlugin" />
+                        <Button x:Name="SettingsButton"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="10,0,0,0"
+                                Content="设置"
+                                Click="OnOpenSettings" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border x:Name="AddPluginPanel"
+                    Grid.Row="1"
+                    Margin="34,0,34,16"
+                    Padding="22,18"
+                    Background="White"
+                    CornerRadius="10"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="从 GitHub 添加" />
+                    <TextBlock Style="{StaticResource MutedText}"
+                               Margin="0,8,0,12"
+                               TextWrapping="Wrap"
+                               Text="粘贴 GitHub 仓库链接，例如 https://github.com/owner/repository。会浅克隆到插件根目录。" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                x:Name="CancelAddPluginButton"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="10,0,0,0"
+                                Content="取消"
+                                Click="OnCancelAddPlugin" />
+                        <Button DockPanel.Dock="Right"
+                                x:Name="ConfirmAddPluginButton"
+                                Style="{StaticResource PrimaryButton}"
+                                Margin="10,0,0,0"
+                                Content="添加"
+                                Click="OnAddPlugin" />
+                        <TextBox x:Name="GitHubUrlBox"
+                                 Style="{StaticResource RoundedInput}"
+                                 VerticalContentAlignment="Center" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <Border x:Name="SettingsPanel"
+                    Grid.Row="2"
+                    Margin="34,0,34,16"
+                    Padding="22,18"
+                    Background="White"
+                    CornerRadius="10"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="插件根目录" />
+                    <TextBlock Style="{StaticResource MutedText}"
+                               Margin="0,8,0,12"
+                               TextWrapping="Wrap"
+                               Text="这里存放各个插件文件夹。修改后保存，主页面会重新扫描。" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                x:Name="BrowsePluginsRootButton"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="10,0,0,0"
+                                Content="浏览"
+                                Click="OnBrowsePluginsRoot" />
+                        <Button DockPanel.Dock="Right"
+                                x:Name="SavePluginsRootButton"
+                                Style="{StaticResource PrimaryButton}"
+                                Margin="10,0,0,0"
+                                Content="保存"
+                                Click="OnSavePluginsRoot" />
+                        <TextBox x:Name="PluginsRootBox"
+                                 Style="{StaticResource RoundedInput}"
+                                 VerticalContentAlignment="Center" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="EmptyState"
+                       Grid.Row="3"
+                       Margin="34,30,34,34"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Top"
+                       FontSize="15"
+                       Foreground="#5E6B7E"
+                       Text="没有识别到插件。可以使用“添加插件”从 GitHub 克隆。" />
+
+            <ScrollViewer Grid.Row="3" Padding="34,0,34,34" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="PluginList" ItemsSource="{Binding Plugins}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="White"
+                                    CornerRadius="10"
+                                    Padding="22,20"
+                                    Margin="0,0,0,12"
+                                    MouseLeftButtonUp="OnPluginClicked"
+                                    Cursor="Hand">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock FontSize="19"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#172033"
+                                                   Text="{Binding Definition.Title}" />
+                                        <TextBlock Style="{StaticResource MutedText}"
+                                                   Margin="0,8,0,0"
+                                                   TextWrapping="Wrap"
+                                                   Text="{Binding Definition.Summary}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Margin="18,0,0,0">
+                                        <Button x:Name="DeletePluginButton"
+                                                HorizontalAlignment="Right"
+                                                Style="{StaticResource DangerButton}"
+                                                Padding="10,5"
+                                                FontSize="12"
+                                                Content="删除"
+                                                Click="OnDeletePlugin" />
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{Binding StatusColor}"
+                                                   Text="{Binding StatusText}" />
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   Style="{StaticResource MutedText}"
+                                                   Margin="0,6,0,0"
+                                                   Text="查看详情" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <Grid x:Name="DetailPage" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Background="White" Padding="34,22,34,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="返回"
+                            Click="OnBackToMainPage" />
+                    <StackPanel Grid.Column="1" Margin="20,0">
+                        <TextBlock Style="{StaticResource PageTitle}" Text="{Binding CurrentPlugin.Definition.Title}" />
+                        <TextBlock Style="{StaticResource MutedText}"
+                                   Margin="0,8,0,0"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding CurrentPlugin.Definition.Summary}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2"
+                               VerticalAlignment="Center"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="{Binding CurrentPlugin.StatusColor}"
+                               Text="{Binding CurrentPlugin.StatusText}" />
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1" Margin="34,20,34,34">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Background="White" CornerRadius="8" Padding="24,22">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="功能" />
+                            <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding CurrentPlugin.Definition.Features}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <TextBlock Text="• "
+                                                       Foreground="#2563EB"
+                                                       FontSize="14"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Top" />
+                                            <TextBlock Text="{Binding}"
+                                                       Foreground="#3D4C60"
+                                                       FontSize="14"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Style="{StaticResource SectionTitle}" Margin="0,18,0,10" Text="README" />
+                            <Border Background="#F8FAFC"
+                                    BorderBrush="#E5EAF0"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="16,12">
+                                <TextBox x:Name="ReadmeBox"
+                                         IsReadOnly="True"
+                                         MinHeight="180"
+                                         MaxHeight="360"
+                                         VerticalScrollBarVisibility="Auto"
+                                         TextWrapping="Wrap"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         FontFamily="Consolas"
+                                         FontSize="12"
+                                         Text="{Binding CurrentPlugin.Definition.ReadmeText, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </Border>
+                            <TextBlock Style="{StaticResource SectionTitle}" Margin="0,18,0,0" Text="指定路径" />
+                            <TextBlock Style="{StaticResource MutedText}"
+                                       Margin="0,10,0,10"
+                                       TextWrapping="Wrap"
+                                       Text="用于 ZCode 安装目录，例如 F:\\Software\\zcode。留空时使用插件自带自动探测。" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right"
+                                        x:Name="BrowseZCodeButton"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="10,0,0,0"
+                                        Content="浏览"
+                                        Click="OnBrowseZCode" />
+                                <TextBox x:Name="ZCodeRootBox"
+                                         Style="{StaticResource RoundedInput}"
+                                         VerticalContentAlignment="Center" />
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Margin="0,20,0,10" Text="Python 路径" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right"
+                                        x:Name="BrowsePythonButton"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="10,0,0,0"
+                                        Content="浏览"
+                                        Click="OnBrowsePython" />
+                                <TextBox x:Name="PythonPathBox"
+                                         Style="{StaticResource RoundedInput}"
+                                         VerticalContentAlignment="Center" />
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
+                                <Button x:Name="InstallButton"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Content="安装"
+                                        Click="OnInstallPlugin" />
+                                <Button x:Name="UninstallButton"
+                                        Style="{StaticResource DangerButton}"
+                                        Margin="10,0,0,0"
+                                        Content="卸载"
+                                        Click="OnUninstallPlugin" />
+                                <Button x:Name="UpdateButton"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="10,0,0,0"
+                                        Content="更新"
+                                        Click="OnUpdatePlugin" />
+                                <Button x:Name="DetailDeleteButton"
+                                        Style="{StaticResource DangerButton}"
+                                        Margin="10,0,0,0"
+                                        Content="移除插件"
+                                        Click="OnDeleteDetailPlugin" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Background="White"
+                        CornerRadius="8"
+                        Margin="0,16,0,0"
+                        Padding="20,16">
+                    <TextBox x:Name="OutputBox"
+                             IsReadOnly="True"
+                             Height="180"
+                             VerticalScrollBarVisibility="Auto"
+                             TextWrapping="Wrap"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             FontFamily="Consolas"
+                             FontSize="12" />
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

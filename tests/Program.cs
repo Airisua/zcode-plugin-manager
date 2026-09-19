@@ -14,7 +14,8 @@ internal class Program
             MarkdownDigestTests.ExtractsTitleSummaryAndFeatures,
             PluginCatalogTests.DiscoversGenericPythonPlugin,
             UpdateServiceTests.ParsesVersionTags,
-            UpdateServiceTests.ReadsChecksumManifest
+            UpdateServiceTests.ReadsChecksumManifest,
+            UpdateServiceTests.ExtractsTagFromRedirect
         ]);
     }
 }

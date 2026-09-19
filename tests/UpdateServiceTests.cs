@@ -30,4 +30,17 @@ internal static class UpdateServiceTests
             File.Delete(path);
         }
     }
+
+    public static Task ExtractsTagFromRedirect()
+    {
+        TestRunner.Equal(
+            "v0.3.0",
+            UpdateService.TryGetRedirectTag("https://github.com/owner/repo/releases/tag/v0.3.0"));
+        TestRunner.Equal(
+            "v1.0.0-rc.1",
+            UpdateService.TryGetRedirectTag("https://github.com/owner/repo/releases/tag/v1%2E0%2E0-rc%2E1"));
+        TestRunner.Null(UpdateService.TryGetRedirectTag("https://github.com/owner/repo/releases"));
+        TestRunner.Null(UpdateService.TryGetRedirectTag(null));
+        return Task.CompletedTask;
+    }
 }

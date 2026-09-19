@@ -1,9 +1,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace ZCodePluginManager.Services;
 
@@ -26,34 +24,39 @@ public static class UpdateService
         Version currentVersion,
         CancellationToken cancellationToken = default)
     {
-        var apiUrl = BuildReleaseApiUrl(repository);
-        using var httpClient = CreateHttpClient();
-        using var response = await httpClient.GetAsync(apiUrl, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        var repositoryUrl = BuildRepositoryUrl(repository);
+        var latestUrl = new Uri(repositoryUrl, "releases/latest");
+        using var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        };
+        using var httpClient = new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(15)
+        };
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"ZCodePluginManager/{GetLocalVersion()}");
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var root = document.RootElement;
-        var tag = root.GetProperty("tag_name").GetString() ?? string.Empty;
-        if (!TryParseVersion(tag, out var version) || version <= currentVersion)
+        using var response = await httpClient.GetAsync(
+            latestUrl,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        var tag = response.Headers.Location is { } location
+            ? ExtractTagFromLocation(MakeAbsolute(latestUrl, location))
+            : null;
+        if (string.IsNullOrWhiteSpace(tag) ||
+            !TryParseVersion(tag, out var version) ||
+            version <= currentVersion)
         {
             return null;
-        }
-
-        var zipAsset = FindAsset(root, ZipAssetName);
-        var checksumAsset = FindAsset(root, ChecksumAssetName);
-        if (zipAsset is null || checksumAsset is null)
-        {
-            throw new InvalidOperationException("最新 Release 缺少 ZCodePluginManager.zip 或 SHA256SUMS。");
         }
 
         return new UpdateCheckResult(
             version,
             tag,
-            root.GetProperty("html_url").GetString() ?? string.Empty,
-            zipAsset.Value.GetProperty("browser_download_url").GetString() ?? string.Empty,
-            checksumAsset.Value.GetProperty("browser_download_url").GetString() ?? string.Empty,
-            root.TryGetProperty("body", out var body) ? body.GetString() ?? string.Empty : string.Empty);
+            new Uri(repositoryUrl, $"releases/tag/{Uri.EscapeDataString(tag)}").ToString(),
+            new Uri(repositoryUrl, $"releases/latest/download/{ZipAssetName}").ToString(),
+            new Uri(repositoryUrl, $"releases/latest/download/{ChecksumAssetName}").ToString(),
+            string.Empty);
     }
 
     public static async Task<string> PrepareAsync(
@@ -186,15 +189,25 @@ public static class UpdateService
         return null;
     }
 
-    private static HttpClient CreateHttpClient()
+    public static string? TryGetRedirectTag(string? location)
     {
-        var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"ZCodePluginManager/{GetLocalVersion()}");
-        httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        return httpClient;
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            return null;
+        }
+
+        const string marker = "/releases/tag/";
+        var index = location.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+        {
+            return null;
+        }
+
+        var tag = Uri.UnescapeDataString(location[(index + marker.Length)..]).Trim('/');
+        return tag.Length == 0 ? null : tag.Split('/')[0];
     }
 
-    private static string BuildReleaseApiUrl(string repository)
+    private static Uri BuildRepositoryUrl(string repository)
     {
         if (!Uri.TryCreate(repository, UriKind.Absolute, out var uri) ||
             uri.Host != "github.com" ||
@@ -209,25 +222,24 @@ public static class UpdateService
             throw new ArgumentException("更新仓库地址缺少 owner/repository。");
         }
 
-        return $"https://api.github.com/repos/{segments[0]}/{segments[1].TrimEnd(".git".ToCharArray())}/releases/latest";
+        return new Uri($"https://github.com/{segments[0]}/{segments[1].TrimEnd(".git".ToCharArray())}/");
     }
 
-    private static JsonElement? FindAsset(JsonElement release, string name)
+    private static string ExtractTagFromLocation(Uri location)
     {
-        if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+        var absolute = location.ToString();
+        var tag = TryGetRedirectTag(absolute);
+        if (string.IsNullOrWhiteSpace(tag))
         {
-            return null;
+            throw new InvalidOperationException($"无法从 GitHub 返回地址识别版本：{absolute}");
         }
 
-        foreach (var asset in assets.EnumerateArray())
-        {
-            if (asset.GetProperty("name").GetString()?.Equals(name, StringComparison.OrdinalIgnoreCase) == true)
-            {
-                return asset;
-            }
-        }
+        return tag;
+    }
 
-        return null;
+    private static Uri MakeAbsolute(Uri baseUri, Uri location)
+    {
+        return location.IsAbsoluteUri ? location : new Uri(baseUri, location);
     }
 
     private static async Task DownloadFileAsync(

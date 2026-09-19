@@ -157,6 +157,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         AddPluginPanel.Visibility = Visibility.Collapsed;
         PluginsRootBox.Text = _settings.PluginsRoot;
+        PluginsRootBox.CaretIndex = PluginsRootBox.Text.Length;
         SettingsPanel.Visibility = SettingsPanel.Visibility == Visibility.Visible
             ? Visibility.Collapsed
             : Visibility.Visible;
@@ -168,6 +169,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (!string.IsNullOrWhiteSpace(folder))
         {
             PluginsRootBox.Text = folder;
+            PluginsRootBox.CaretIndex = PluginsRootBox.Text.Length;
         }
     }
 

@@ -21,6 +21,11 @@
                 <Grid>
                     <StackPanel>
                         <TextBlock Style="{StaticResource PageTitle}" Text="插件" />
+                        <TextBlock FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2563EB"
+                                   Margin="0,4,0,0"
+                                   Text="{Binding VersionText, Mode=OneWay}" />
                         <TextBlock Style="{StaticResource MutedText}"
                                    Margin="0,8,0,0"
                                    Text="{Binding PluginsRootSummary, Mode=OneWay}" />

@@ -22,6 +22,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _settings = SettingsService.Load();
         Plugins = _plugins;
         DataContext = this;
+        Title = $"ZCode 插件管理器 v{GetLocalVersion()}";
         PluginsRootBox.Text = _settings.PluginsRoot;
         ReloadPlugins();
     }
@@ -29,6 +30,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public ObservableCollection<PluginViewModel> Plugins { get; }
 
     public string PluginsRootSummary => $"插件根目录：{_settings.PluginsRoot}";
+
+    public string VersionText => $"当前版本：v{GetLocalVersion()}";
 
     public PluginViewModel? CurrentPlugin
     {
@@ -51,6 +54,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         EmptyState.Visibility = _plugins.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static string GetLocalVersion()
+    {
+        return typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
     private void OnRefreshPlugins(object sender, RoutedEventArgs e)
